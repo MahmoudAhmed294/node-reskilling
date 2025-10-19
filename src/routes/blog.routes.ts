@@ -1,6 +1,9 @@
 import express from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
+import { withSecurity } from '../middlewares/auth.middleware';
+import { checkBlogOwnership } from '../middlewares/blogOwnership.middleware';
 import { createBlog, deleteBlog, getBlogs, updateBlog } from '../controllers/blog.controller';
+import { validateRequest } from '../middlewares/validateRequest.middleware';
+import { updateBlogValidations, getBlogsValidations, deleteBlogValidations } from '../middlewares/blogValidations.middleware';
 
 const router = express.Router();
 
@@ -46,17 +49,17 @@ const router = express.Router();
  *       400:
  *         description: Title and content are required
  *       401:
- *         description: User not authenticated
+ *         description: User not withSecurityd
  *       500:
  *         description: Error creating blog
  */
-router.post('/', authenticate, createBlog);
+router.post('/', withSecurity, createBlog);
 
 /**
  * @swagger
  * /api/blogs:
  *   get:
- *     summary: Get all blog posts
+ *     summary: Get all blog posts with pagination and search
  *     tags: [Blogs]
  *     security:
  *       - bearerAuth: []
@@ -66,9 +69,27 @@ router.post('/', authenticate, createBlog);
  *         schema:
  *           type: string
  *         description: Filter blogs by category
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of blogs per page (default 10, max 100)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search blogs by title or content (case-insensitive)
  *     responses:
  *       200:
- *         description: List of blogs
+ *         description: List of blogs with pagination info
  *         content:
  *           application/json:
  *             schema:
@@ -78,10 +99,21 @@ router.post('/', authenticate, createBlog);
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Blog'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
  *       500:
  *         description: Error fetching blogs
  */
-router.get('/', authenticate, getBlogs);
+router.get('/', withSecurity, getBlogsValidations, validateRequest, getBlogs);
 
 /**
  * @swagger
@@ -133,7 +165,7 @@ router.get('/', authenticate, getBlogs);
  *       500:
  *         description: Error updating blog
  */
-router.put('/:id', authenticate, updateBlog);
+router.put('/:id', withSecurity, checkBlogOwnership, updateBlogValidations, validateRequest, updateBlog);
 
 /**
  * @swagger
@@ -167,6 +199,6 @@ router.put('/:id', authenticate, updateBlog);
  *       500:
  *         description: Error deleting blog
  */
-router.delete('/:id', authenticate, deleteBlog);
+router.delete('/:id', withSecurity, checkBlogOwnership, deleteBlogValidations, validateRequest, deleteBlog);
 
 export default router;
