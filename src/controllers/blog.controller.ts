@@ -28,11 +28,47 @@ export const createBlog = async (req: Request, res: Response): Promise<void> => 
 
 export const getBlogs = async (req: Request, res: Response) => {
   try {
-    const { category } = req.query;
-    const filter = category ? { category } : {};
-    const blogs = await Blog.find(filter).populate('owner', 'email name');
+    const { category, page = 1, limit = 10, search } = req.query;
+    const filter: any = {};
 
-    res.status(200).json({ blogs });
+    if (!req?.body.user) {
+      res.status(401).json({ message: 'User not authenticated.' });
+      return;
+    }
+
+    filter.owner = req.body.user.id;
+
+    if (category) {
+      filter.category = category;
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const blogs = await Blog.find(filter)
+      .populate('owner', 'email name')
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await Blog.countDocuments(filter);
+
+    res.status(200).json({
+      blogs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching blogs.', error });
   }

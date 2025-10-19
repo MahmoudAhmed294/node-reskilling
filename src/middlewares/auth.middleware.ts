@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 
-export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+export const withSecurity = (req: Request, res: Response, next: NextFunction): void => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {

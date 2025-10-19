@@ -40,7 +40,6 @@ export const signin = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ message: 'Login successful', token });
-    
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
